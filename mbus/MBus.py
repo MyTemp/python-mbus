@@ -1,6 +1,10 @@
 """
 Python bindings for rSCADA libmbus.
 """
+import ctypes
+from ctypes import byref, c_int
+from mbus.MBusFrame import *
+from mbus.MBusFrameData import *
 
 class MBus:
     """
@@ -72,10 +76,12 @@ class MBus:
 
 
         if device:
+            device = bytes(device,'UTF-8')
             fd = os.open(device, os.O_RDONLY)
             if not os.isatty(fd):
                 raise TypeError(device+" is not a TTY")
             os.close(fd)
+            self.handle = self._libmbus.mbus_context_serial(device)
         elif host != None and port:
             self.handle = self._libmbus.mbus_context_tcp(host)
 
@@ -104,9 +110,11 @@ class MBus:
         Low-level function: send an request frame to the given address.
         """
         if self.handle:
+            print("=== before send request frame")
             if self._libmbus.mbus_send_request_frame(
-                    byref(self.handle), c_int(address)) == -1:
+                    self.handle, c_int(address)) == -1:
                 raise Exception("libmbus.mbus_send_request_frame failed")
+            print("=== after send request frame")
         else:
             raise Exception("Handle object not configure")
 
@@ -116,11 +124,13 @@ class MBus:
         """
 
         if self.handle:
+            pass
+        else:
             raise Exception("Handle object not configure")
 
         reply = MBusFrame()
 
-        if self._libmbus.mbus_recv_frame(byref(self.handle), byref(reply)) != 0:
+        if self._libmbus.mbus_recv_frame(self.handle, byref(reply)) != 0:
             raise Exception("libmbus.mbus_recv_frame failed")
 
         return reply
@@ -142,6 +152,7 @@ class MBus:
         Low-level function: convert reply data frame to xml.
         """
 
+        self._libmbus.mbus_frame_data_xml.restype = c_char_p
         xml_result = self._libmbus.mbus_frame_data_xml(byref(reply_data))
 
-        return reply_data
+        return xml_result

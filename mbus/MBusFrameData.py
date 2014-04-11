@@ -1,3 +1,4 @@
+from ctypes import *
 class MBusFrameData(Structure):
     _fields_ = [("data_var",   c_uint8 * 16),  # MBusFrameFixed
                 ("data_fixed", c_uint8),
